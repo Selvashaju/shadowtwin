@@ -6,5 +6,9 @@ numpy
 stix2
 pytest
 httpx
+<<<<<<< HEAD
+=======
+
+>>>>>>> origin/feature/jk-ai-mitre
 openai
 python-dotenv

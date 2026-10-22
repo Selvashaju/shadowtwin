@@ -31,6 +31,7 @@ from engine.graph import (
     hop_p,
 )
 from engine.montecarlo import breach_probability
+from ai.integration import explain_edge_ids
 
 # JK's existing MITRE explanation integration
 from ai.integration import explain_edge_ids
@@ -752,21 +753,12 @@ def compare(req: CompareRequest):
 # JK OFFLINE MITRE EXPLANATION
 # =====================================================
 
-@app.post(
-    "/explain",
-    response_model=ExplainResponse,
-)
+@app.post("/explain", response_model=ExplainResponse)
 def explain(req: ExplainRequest):
-    twin = load_twin()
-
     try:
-        return explain_edge_ids(
-            req.path,
-            twin
-        )
-
+        return explain_edge_ids(req.path, load_twin())
     except ValueError as exc:
         raise HTTPException(
-            status_code=422,
+            status_code=400,
             detail=str(exc)
-        )
+        ) from exc
