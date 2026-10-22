@@ -4,6 +4,38 @@ import type { ElementDefinition } from "cytoscape";
 import { Activity, AlertTriangle, Lock, Network, RefreshCw, Shield, ShieldCheck } from "lucide-react";
 import { getTwin, simulate, type Persona, type SimulateResponse, type Twin, type TwinNode, type TwinEdge, type TwinControl } from "./api";
 
+// The Defence Planner uses the same backend URL as the other frontend API calls.
+const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+
+type DefencePlan = {
+  persona: Persona;
+  budget: number;
+  before: number;
+  after: number;
+  controls: string[];
+  steps: Array<{
+    control: string;
+    label: string;
+    cost: number;
+    breach_before: number;
+    breach_after: number;
+    drop: number;
+  }>;
+  blast_before: number;
+  blast_after: number;
+  headline: string;
+};
+
+async function requestDefencePlan(persona: Persona, entry: string, controls: string[], budget: number): Promise<DefencePlan> {
+  const response = await fetch(`${API_BASE}/defend`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ persona, entry: [entry], controls, budget }),
+  });
+  if (!response.ok) throw new Error(`Defence request failed (HTTP ${response.status})`);
+  return (await response.json()) as DefencePlan;
+}
+
 const demoNodes: TwinNode[] = [
   { id: "employee", label: "HR Employee", type: "user", zone: "corp", criticality: 2, props: { entry: true } },
   { id: "workstation", label: "HR Workstation", type: "workstation", zone: "corp", criticality: 2, props: {} },
@@ -53,6 +85,10 @@ export default function App() {
   const [controls, setControls] = useState<string[]>([]);
   const [result, setResult] = useState<SimulateResponse | null>(null);
   const [simStatus, setSimStatus] = useState("Waiting for real network");
+  const [defencePlan, setDefencePlan] = useState<DefencePlan | null>(null);
+  const [planning, setPlanning] = useState(false);
+  const [planError, setPlanError] = useState("");
+  const [budget, setBudget] = useState(2);
 
   useEffect(() => {
     let cancelled = false;
@@ -99,9 +135,37 @@ export default function App() {
     ...twin.edges.map(e => ({ data: { id: e.id, source: e.source, target: e.target, technique: e.technique }, classes: blocked.has(e.id) ? "blocked" : highlighted.includes(e.id) ? "attack" : "" })),
   ], [twin, blocked, highlighted]);
 
-  const toggleControl = (id: string) => setControls(current => current.includes(id) ? current.filter(x => x !== id) : [...current, id]);
-  const reset = () => { setControls(twin.controls.filter(c => c.enabled).map(c => c.id)); setPersona("apt"); setEntry(entries[0]?.id ?? "employee"); };
-  const applyDemo = () => setControls(current => Array.from(new Set([...current, ...(live ? ["C2", "C4"] : ["mfa", "segmentation"]).filter(id => twin.controls.some(c => c.id === id))])));
+  const toggleControl = (id: string) => {
+    setDefencePlan(null);
+    setControls(current => current.includes(id) ? current.filter(x => x !== id) : [...current, id]);
+  };
+  const reset = () => {
+    setDefencePlan(null);
+    setPlanError("");
+    setControls(twin.controls.filter(c => c.enabled).map(c => c.id));
+    setPersona("apt");
+    setEntry(entries[0]?.id ?? "employee");
+  };
+  const handlePlanDefence = async () => {
+    if (!live || !selectedEntry) return;
+    setPlanning(true);
+    setPlanError("");
+    setDefencePlan(null);
+    try {
+      const plan = await requestDefencePlan(persona, selectedEntry, controls, budget);
+      setDefencePlan(plan);
+    } catch (error) {
+      setPlanError(error instanceof Error ? error.message : "Defence planning failed");
+    } finally {
+      setPlanning(false);
+    }
+  };
+  const applyDefencePlan = () => {
+    if (!defencePlan) return;
+    const available = new Set(twin.controls.map(control => control.id));
+    setControls(current => Array.from(new Set([...current, ...defencePlan.controls.filter(id => available.has(id))])));
+    setDefencePlan(null);
+  };
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
@@ -113,11 +177,18 @@ export default function App() {
         <aside className="rounded-xl border border-slate-800 bg-slate-900 p-5">
           <h2 className="mb-5 flex items-center gap-2 font-bold"><Lock size={18} className="text-cyan-400"/>Attack Configuration</h2>
           <label className="mb-2 block text-sm text-slate-400">Attacker Persona</label>
-          <select className="mb-5 w-full rounded-lg bg-slate-800 p-3" value={persona} onChange={e => setPersona(e.target.value as Persona)}><option value="script_kiddie">Script Kiddie</option><option value="ransomware">Ransomware Gang</option><option value="apt">Advanced Persistent Threat</option></select>
+          <select className="mb-5 w-full rounded-lg bg-slate-800 p-3" value={persona} onChange={e => { setPersona(e.target.value as Persona); setDefencePlan(null); }}><option value="script_kiddie">Script Kiddie</option><option value="ransomware">Ransomware Gang</option><option value="apt">Advanced Persistent Threat</option></select>
           <label className="mb-2 block text-sm text-slate-400">Entry Point</label>
-          <select className="mb-6 w-full rounded-lg bg-slate-800 p-3" value={selectedEntry ?? ""} onChange={e => setEntry(e.target.value)}>{entries.map(n => <option key={n.id} value={n.id}>{n.label}</option>)}</select>
+          <select className="mb-6 w-full rounded-lg bg-slate-800 p-3" value={selectedEntry ?? ""} onChange={e => { setEntry(e.target.value); setDefencePlan(null); }}>{entries.map(n => <option key={n.id} value={n.id}>{n.label}</option>)}</select>
           <h3 className="mb-4 font-semibold">Security Controls</h3><div className="space-y-4">{twin.controls.map(c => <label key={c.id} className="flex items-center justify-between gap-3 text-sm"><span>{c.label}</span><input type="checkbox" className="h-5 w-5 shrink-0 accent-cyan-400" checked={controls.includes(c.id)} onChange={() => toggleControl(c.id)}/></label>)}</div>
-          <button onClick={applyDemo} className="mt-6 w-full rounded-lg bg-cyan-600 p-3 font-semibold hover:bg-cyan-500"><ShieldCheck size={16} className="mr-2 inline"/>Apply Demo Defence</button>
+          <div className="mt-6 flex items-center justify-between gap-2 text-sm">
+            <label htmlFor="budget" className="text-slate-300">Defence budget</label>
+            <select id="budget" value={budget} onChange={e => { setBudget(Number(e.target.value)); setDefencePlan(null); }} className="rounded-lg bg-slate-800 px-3 py-2">
+              {[1, 2, 3, 4, 5, 6].map(value => <option key={value} value={value}>{value} units</option>)}
+            </select>
+          </div>
+          <button onClick={handlePlanDefence} disabled={!live || planning} className="mt-3 w-full rounded-lg bg-cyan-600 p-3 font-semibold hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-50"><ShieldCheck size={16} className="mr-2 inline"/>{planning ? "Planning..." : "Plan Defence"}</button>
+          {planError && <p role="alert" className="mt-2 break-words text-xs text-red-400">{planError}</p>}
           <button onClick={reset} className="mt-3 w-full rounded-lg border border-slate-600 p-3 hover:bg-slate-800"><RefreshCw size={16} className="mr-2 inline"/>Reset Simulation</button>
         </aside>
         <main className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900 lg:col-span-2">
@@ -127,6 +198,19 @@ export default function App() {
         </main>
         <aside className="space-y-4">
           <div className="rounded-xl border border-slate-800 bg-slate-900 p-5"><h2 className="mb-5 flex items-center gap-2 font-bold"><AlertTriangle className="text-red-400" size={19}/>Risk Overview</h2><p className="text-xs text-slate-400">Breach Probability</p><p className="mt-2 text-3xl font-extrabold text-amber-400">{live && result && !hasStubLikeResult ? `${result.breach_pct.toFixed(1)}%` : "Awaiting engine"}</p><p className="mt-2 break-words text-xs text-slate-500">{hasStubLikeResult ? "Backend returned an empty/stub-like result — no verified risk score yet." : simStatus}</p><hr className="my-5 border-slate-700"/><p className="text-sm text-slate-400">Blocked Relationships</p><p className="mt-2 text-3xl font-bold">{blocked.size} / {twin.edges.length}</p><hr className="my-5 border-slate-700"/><p className="text-sm text-slate-400">Blast Radius</p><p className="mt-2 text-3xl font-bold text-red-400">{live && result && !hasStubLikeResult ? `${result.blast_radius.count} assets` : "Awaiting engine"}</p></div>
+          {defencePlan && (
+            <div className="rounded-xl border border-emerald-700 bg-slate-900 p-5">
+              <h2 className="mb-3 flex items-center gap-2 font-bold text-emerald-400"><ShieldCheck size={19}/>Recommended Defence</h2>
+              <p className="mb-4 text-sm text-slate-300">{defencePlan.headline}</p>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="rounded-lg bg-slate-800 p-3"><p className="text-xs text-slate-400">Before</p><p className="text-xl font-bold text-red-400">{defencePlan.before.toFixed(1)}%</p></div>
+                <div className="rounded-lg bg-slate-800 p-3"><p className="text-xs text-slate-400">After (predicted)</p><p className="text-xl font-bold text-emerald-400">{defencePlan.after.toFixed(1)}%</p></div>
+              </div>
+              <p className="mt-3 text-sm text-slate-300">Blast radius: {defencePlan.blast_before} → {defencePlan.blast_after} assets</p>
+              <div className="mt-3 space-y-2">{defencePlan.steps.map(step => <div key={step.control} className="rounded-lg bg-slate-800 p-3 text-sm"><span className="font-semibold">{step.label}</span><p className="mt-1 text-xs text-slate-400">Cost {step.cost} · Risk reduction {step.drop.toFixed(1)} points</p></div>)}</div>
+              {defencePlan.controls.length > 0 ? <button onClick={applyDefencePlan} className="mt-4 w-full rounded-lg bg-emerald-600 p-3 font-semibold hover:bg-emerald-500">Apply Recommended Controls</button> : <p className="mt-3 text-xs text-slate-400">No additional controls were recommended for this budget.</p>}
+            </div>
+          )}
           <div className="rounded-xl border border-slate-800 bg-slate-900 p-5"><h2 className="mb-3 flex items-center gap-2 font-bold"><ShieldCheck className="text-emerald-400" size={19}/>Defence Overview</h2><p className="mb-3 text-sm text-slate-400">Selected Security Controls</p>{controls.length === 0 ? <p className="text-sm text-amber-400">No protections enabled</p> : <div className="space-y-2">{controls.map(id => <div className="rounded-lg bg-slate-800 p-3 text-sm" key={id}>{twin.controls.find(c => c.id === id)?.label ?? id}</div>)}</div>}<p className="mt-4 text-xs text-slate-500">{live ? "Calculated simulation updates after a control changes." : "Demo controls only; real risk requires backend organization data."}</p></div>
         </aside>
       </div>
