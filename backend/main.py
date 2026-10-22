@@ -762,3 +762,19 @@ def explain(req: ExplainRequest):
             status_code=400,
             detail=str(exc)
         ) from exc
+
+
+# Root URL -> API docs
+from fastapi.responses import RedirectResponse
+
+@app.get("/", include_in_schema=False)
+def root():
+    return RedirectResponse(url="/docs")
+
+
+# Root URL -> API docs
+from fastapi.responses import RedirectResponse
+
+@app.get("/", include_in_schema=False)
+def root():
+    return RedirectResponse(url="/docs")
