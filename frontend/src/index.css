@@ -1,4 +1,4 @@
-@import "tailwindcss";
+ @import "tailwindcss";
 
 :root {
   font-family: Inter, system-ui, sans-serif;
@@ -14,4 +14,4 @@ body {
 
 button {
   cursor: pointer;
-} 
+}

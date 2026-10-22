@@ -102,3 +102,60 @@ export async function simulate(
 
   return response.json();
 }
+  
+export interface DefendResponse {
+  persona: Persona;
+  budget: number;
+  before: number;
+  after: number;
+  steps: {
+    control: string;
+    label: string;
+    cost: number;
+    breach_before: number;
+    breach_after: number;
+    drop: number;
+  }[];
+  controls: string[];
+  ranking: {
+    control: string;
+    label: string;
+    cost: number;
+    breach_after: number;
+    drop: number;
+  }[];
+  cut_edges: string[];
+  cut_controls: string[];
+  blast_before: number;
+  blast_after: number;
+  headline: string;
+}
+
+export async function planDefence(
+  persona: Persona,
+  entry: string[] | null,
+  controls: string[] = [],
+  budget = 2
+): Promise<DefendResponse> {
+  const response = await fetch(`${API_BASE}/defend`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      budget,
+      persona,
+      entry,
+      controls,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      `Defence planning failed: ${response.status}`
+    );
+  }
+
+  return response.json();
+}
+  
