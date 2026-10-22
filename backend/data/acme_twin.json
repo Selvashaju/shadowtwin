@@ -1,440 +1,119 @@
+
 {
-  "org": "Acme FinServ",
+  "org": "ACME Corporation",
   "nodes": [
     {
-      "id": "u_ravi",
+      "id": "internet",
       "type": "user",
-      "label": "Ravi (HR)",
+      "label": "External Attacker",
+      "zone": "internet",
+      "criticality": 1,
+      "props": {"entry": true}
+    },
+    {
+      "id": "employee",
+      "type": "workstation",
+      "label": "Employee Laptop",
       "zone": "corp",
       "criticality": 2,
-      "props": {
-        "mfa": false,
-        "phishable": true
-      }
+      "props": {"edr": false}
     },
     {
-      "id": "u_meena",
-      "type": "user",
-      "label": "Meena (Finance)",
-      "zone": "corp",
-      "criticality": 2,
-      "props": {
-        "mfa": false,
-        "phishable": true
-      }
-    },
-    {
-      "id": "u_arjun",
-      "type": "user",
-      "label": "Arjun (IT admin)",
-      "zone": "corp",
-      "criticality": 4,
-      "props": {
-        "mfa": false,
-        "privileged": true
-      }
-    },
-    {
-      "id": "ws_hr01",
-      "type": "workstation",
-      "label": "HR-PC-01",
-      "zone": "corp",
-      "criticality": 2,
-      "props": {
-        "os": "Windows 11",
-        "edr": false
-      }
-    },
-    {
-      "id": "ws_fin01",
-      "type": "workstation",
-      "label": "FIN-PC-01",
-      "zone": "corp",
-      "criticality": 3,
-      "props": {
-        "os": "Windows 11",
-        "edr": false
-      }
-    },
-    {
-      "id": "ws_it01",
-      "type": "workstation",
-      "label": "IT-PC-01",
-      "zone": "corp",
-      "criticality": 4,
-      "props": {
-        "os": "Windows 11",
-        "edr": false
-      }
-    },
-    {
-      "id": "app_web",
+      "id": "webapp",
       "type": "application",
-      "label": "Public Website",
+      "label": "Public Web Application",
       "zone": "dmz",
-      "criticality": 3,
-      "props": {
-        "public": true
-      }
-    },
-    {
-      "id": "app_hrms",
-      "type": "application",
-      "label": "HRMS Portal",
-      "zone": "dmz",
-      "criticality": 3,
-      "props": {
-        "stores_creds": true
-      }
-    },
-    {
-      "id": "app_chatbot",
-      "type": "application",
-      "label": "AI Support Chatbot",
-      "zone": "dmz",
-      "criticality": 3,
-      "props": {
-        "rag_enabled": true
-      }
-    },
-    {
-      "id": "srv_vpn",
-      "type": "server",
-      "label": "VPN Gateway",
-      "zone": "dmz",
-      "criticality": 4,
-      "props": {
-        "remote_access": true
-      }
-    },
-    {
-      "id": "srv_ad",
-      "type": "server",
-      "label": "Domain Controller",
-      "zone": "core",
-      "criticality": 5,
-      "props": {}
-    },
-    {
-      "id": "srv_file",
-      "type": "server",
-      "label": "File Server",
-      "zone": "core",
       "criticality": 3,
       "props": {}
     },
     {
-      "id": "srv_api",
+      "id": "server",
       "type": "server",
-      "label": "Internal API Server",
+      "label": "Internal Application Server",
       "zone": "core",
       "criticality": 4,
       "props": {}
     },
     {
-      "id": "db_payroll",
+      "id": "database",
       "type": "database",
-      "label": "Payroll DB",
+      "label": "Customer Database",
       "zone": "core",
       "criticality": 5,
-      "props": {
-        "pii": true,
-        "crown_jewel": true
-      }
-    },
-    {
-      "id": "db_customer",
-      "type": "database",
-      "label": "Customer DB",
-      "zone": "core",
-      "criticality": 5,
-      "props": {
-        "pii": true,
-        "crown_jewel": true
-      }
-    },
-    {
-      "id": "cloud_rag",
-      "type": "cloud",
-      "label": "RAG Knowledge Base",
-      "zone": "cloud",
-      "criticality": 3,
-      "props": {}
-    },
-    {
-      "id": "cloud_ci",
-      "type": "cloud",
-      "label": "CI/CD Pipeline",
-      "zone": "cloud",
-      "criticality": 4,
-      "props": {}
-    },
-    {
-      "id": "cloud_backup",
-      "type": "cloud",
-      "label": "Backup Bucket",
-      "zone": "cloud",
-      "criticality": 4,
-      "props": {}
+      "props": {"crown_jewel": true}
     }
   ],
   "edges": [
     {
-      "id": "e1",
-      "source": "u_ravi",
-      "target": "ws_hr01",
-      "relation": "logs_into",
+      "id": "E1",
+      "source": "internet",
+      "target": "employee",
+      "relation": "phishing",
       "technique": "T1566",
-      "difficulty": 0.3,
-      "controls": ["mfa", "email_filter"]
-    },
-    {
-      "id": "e2",
-      "source": "ws_hr01",
-      "target": "app_hrms",
-      "relation": "has_session",
-      "technique": "T1539",
-      "difficulty": 0.4,
-      "controls": ["edr"]
-    },
-    {
-      "id": "e3",
-      "source": "app_hrms",
-      "target": "srv_ad",
-      "relation": "service_account",
-      "technique": "T1078",
-      "difficulty": 0.5,
-      "controls": ["least_privilege"]
-    },
-    {
-      "id": "e4",
-      "source": "srv_ad",
-      "target": "db_payroll",
-      "relation": "admin_of",
-      "technique": "T1021",
       "difficulty": 0.2,
-      "controls": ["segmentation"]
+      "controls": ["C1"]
     },
     {
-      "id": "e5",
-      "source": "u_meena",
-      "target": "ws_fin01",
-      "relation": "logs_into",
-      "technique": "T1566",
-      "difficulty": 0.3,
-      "controls": ["mfa", "email_filter"]
-    },
-    {
-      "id": "e6",
-      "source": "ws_fin01",
-      "target": "srv_ad",
-      "relation": "credential_access",
-      "technique": "T1003",
-      "difficulty": 0.35,
-      "controls": ["edr"]
-    },
-    {
-      "id": "e7",
-      "source": "u_arjun",
-      "target": "ws_it01",
-      "relation": "logs_into",
-      "technique": "T1566",
-      "difficulty": 0.25,
-      "controls": ["mfa", "email_filter"]
-    },
-    {
-      "id": "e8",
-      "source": "ws_it01",
-      "target": "cloud_ci",
-      "relation": "admin_access",
-      "technique": "T1078",
-      "difficulty": 0.3,
-      "controls": ["least_privilege"]
-    },
-    {
-      "id": "e9",
-      "source": "cloud_ci",
-      "target": "cloud_backup",
-      "relation": "pipeline_access",
+      "id": "E2",
+      "source": "employee",
+      "target": "server",
+      "relation": "lateral_movement",
       "technique": "T1021",
       "difficulty": 0.3,
-      "controls": ["least_privilege"]
+      "controls": ["C2"]
     },
     {
-      "id": "e10",
-      "source": "cloud_backup",
-      "target": "db_payroll",
-      "relation": "backup_access",
-      "technique": "T1021",
-      "difficulty": 0.25,
-      "controls": ["segmentation"]
-    },
-    {
-      "id": "e11",
-      "source": "app_web",
-      "target": "srv_api",
-      "relation": "api_access",
+      "id": "E3",
+      "source": "internet",
+      "target": "webapp",
+      "relation": "exploit",
       "technique": "T1190",
-      "difficulty": 0.35,
-      "controls": ["email_filter"]
+      "difficulty": 0.4,
+      "controls": ["C3"]
     },
     {
-      "id": "e12",
-      "source": "srv_api",
-      "target": "db_customer",
-      "relation": "service_access",
-      "technique": "T1078",
+      "id": "E4",
+      "source": "webapp",
+      "target": "server",
+      "relation": "lateral_movement",
+      "technique": "T1021",
       "difficulty": 0.3,
-      "controls": ["segmentation"]
+      "controls": ["C2"]
     },
     {
-      "id": "e13",
-      "source": "app_chatbot",
-      "target": "cloud_rag",
-      "relation": "rag_access",
-      "technique": "AML.T0051",
-      "difficulty": 0.3,
-      "controls": ["least_privilege"]
-    },
-    {
-      "id": "e14",
-      "source": "cloud_rag",
-      "target": "db_customer",
+      "id": "E5",
+      "source": "server",
+      "target": "database",
       "relation": "data_access",
-      "technique": "AML.T0051",
-      "difficulty": 0.35,
-      "controls": ["segmentation", "least_privilege"]
-    },
-    {
-      "id": "e15",
-      "source": "srv_vpn",
-      "target": "srv_ad",
-      "relation": "remote_access",
-      "technique": "T1078",
-      "difficulty": 0.4,
-      "controls": ["mfa"]
-    },
-    {
-      "id": "e16",
-      "source": "srv_ad",
-      "target": "srv_file",
-      "relation": "domain_access",
-      "technique": "T1021",
-      "difficulty": 0.25,
-      "controls": ["segmentation"]
-    },
-    {
-      "id": "e17",
-      "source": "srv_file",
-      "target": "srv_api",
-      "relation": "shared_service",
-      "technique": "T1021",
-      "difficulty": 0.45,
-      "controls": ["segmentation"]
-    },
-    {
-      "id": "e18",
-      "source": "srv_file",
-      "target": "db_customer",
-      "relation": "data_share",
-      "technique": "T1021",
-      "difficulty": 0.4,
-      "controls": ["segmentation"]
-    },
-    {
-      "id": "e19",
-      "source": "u_ravi",
-      "target": "srv_vpn",
-      "relation": "remote_login",
-      "technique": "T1078",
-      "difficulty": 0.5,
-      "controls": ["mfa"]
-    },
-    {
-      "id": "e20",
-      "source": "srv_vpn",
-      "target": "srv_file",
-      "relation": "remote_share",
-      "technique": "T1021",
-      "difficulty": 0.45,
-      "controls": ["segmentation"]
-    },
-    {
-      "id": "e21",
-      "source": "ws_it01",
-      "target": "srv_ad",
-      "relation": "admin_login",
-      "technique": "T1078",
-      "difficulty": 0.25,
-      "controls": ["least_privilege"]
-    },
-    {
-      "id": "e22",
-      "source": "srv_api",
-      "target": "srv_ad",
-      "relation": "service_identity",
-      "technique": "T1078",
-      "difficulty": 0.5,
-      "controls": ["least_privilege"]
-    },
-    {
-      "id": "e23",
-      "source": "cloud_backup",
-      "target": "srv_file",
-      "relation": "backup_restore",
-      "technique": "T1021",
-      "difficulty": 0.5,
-      "controls": ["segmentation"]
-    },
-    {
-      "id": "e24",
-      "source": "app_web",
-      "target": "srv_vpn",
-      "relation": "public_to_remote_access",
-      "technique": "T1190",
-      "difficulty": 0.55,
-      "controls": ["email_filter"]
-    },
-    {
-      "id": "e25",
-      "source": "app_hrms",
-      "target": "srv_file",
-      "relation": "document_access",
-      "technique": "T1021",
-      "difficulty": 0.5,
-      "controls": ["least_privilege"]
+      "technique": "T1213",
+      "difficulty": 0.1,
+      "controls": ["C4"]
     }
   ],
   "controls": [
     {
-      "id": "mfa",
-      "label": "Enforce MFA",
-      "enabled": false
+      "id": "C1",
+      "label": "Email Phishing Protection",
+      "enabled": false,
+      "cost": 1
     },
     {
-      "id": "edr",
-      "label": "Deploy EDR",
-      "enabled": false
+      "id": "C2",
+      "label": "Network Segmentation",
+      "enabled": false,
+      "cost": 2
     },
     {
-      "id": "least_privilege",
-      "label": "Least-privilege service accounts",
-      "enabled": false
+      "id": "C3",
+      "label": "Web Application Firewall",
+      "enabled": false,
+      "cost": 1
     },
     {
-      "id": "segmentation",
-      "label": "Segment core network",
-      "enabled": false
-    },
-    {
-      "id": "email_filter",
-      "label": "Email attachment filtering",
-      "enabled": false
-    },
-    {
-      "id": "prompt_filter",
-      "label": "AI prompt filtering",
-      "enabled": false
+      "id": "C4",
+      "label": "Database Access Restriction",
+      "enabled": false,
+      "cost": 2
     }
   ]
 }
