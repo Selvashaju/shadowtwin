@@ -2,4 +2,16 @@ fastapi
 uvicorn
 networkx
 numpy
+<<<<<<< HEAD
 pydantic
+=======
+stix2
+pytest
+httpx
+<<<<<<< HEAD
+=======
+
+>>>>>>> origin/feature/jk-ai-mitre
+openai
+python-dotenv
+>>>>>>> 7a55fdb05e3945545285c893b3078b66136daace
