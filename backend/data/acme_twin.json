@@ -1,0 +1,119 @@
+
+{
+  "org": "ACME Corporation",
+  "nodes": [
+    {
+      "id": "internet",
+      "type": "user",
+      "label": "External Attacker",
+      "zone": "internet",
+      "criticality": 1,
+      "props": {"entry": true}
+    },
+    {
+      "id": "employee",
+      "type": "workstation",
+      "label": "Employee Laptop",
+      "zone": "corp",
+      "criticality": 2,
+      "props": {"edr": false}
+    },
+    {
+      "id": "webapp",
+      "type": "application",
+      "label": "Public Web Application",
+      "zone": "dmz",
+      "criticality": 3,
+      "props": {}
+    },
+    {
+      "id": "server",
+      "type": "server",
+      "label": "Internal Application Server",
+      "zone": "core",
+      "criticality": 4,
+      "props": {}
+    },
+    {
+      "id": "database",
+      "type": "database",
+      "label": "Customer Database",
+      "zone": "core",
+      "criticality": 5,
+      "props": {"crown_jewel": true}
+    }
+  ],
+  "edges": [
+    {
+      "id": "E1",
+      "source": "internet",
+      "target": "employee",
+      "relation": "phishing",
+      "technique": "T1566",
+      "difficulty": 0.2,
+      "controls": ["C1"]
+    },
+    {
+      "id": "E2",
+      "source": "employee",
+      "target": "server",
+      "relation": "lateral_movement",
+      "technique": "T1021",
+      "difficulty": 0.3,
+      "controls": ["C2"]
+    },
+    {
+      "id": "E3",
+      "source": "internet",
+      "target": "webapp",
+      "relation": "exploit",
+      "technique": "T1190",
+      "difficulty": 0.4,
+      "controls": ["C3"]
+    },
+    {
+      "id": "E4",
+      "source": "webapp",
+      "target": "server",
+      "relation": "lateral_movement",
+      "technique": "T1021",
+      "difficulty": 0.3,
+      "controls": ["C2"]
+    },
+    {
+      "id": "E5",
+      "source": "server",
+      "target": "database",
+      "relation": "data_access",
+      "technique": "T1213",
+      "difficulty": 0.1,
+      "controls": ["C4"]
+    }
+  ],
+  "controls": [
+    {
+      "id": "C1",
+      "label": "Email Phishing Protection",
+      "enabled": false,
+      "cost": 1
+    },
+    {
+      "id": "C2",
+      "label": "Network Segmentation",
+      "enabled": false,
+      "cost": 2
+    },
+    {
+      "id": "C3",
+      "label": "Web Application Firewall",
+      "enabled": false,
+      "cost": 1
+    },
+    {
+      "id": "C4",
+      "label": "Database Access Restriction",
+      "enabled": false,
+      "cost": 2
+    }
+  ]
+}
