@@ -6,3 +6,5 @@ numpy
 stix2
 pytest
 httpx
+openai
+python-dotenv
