@@ -1,10 +1,5 @@
 fastapi
 uvicorn
-pydantic
 networkx
 numpy
-stix2
-pytest
-httpx
-openai
-python-dotenv
+pydantic
