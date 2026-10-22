@@ -20,6 +20,7 @@ from models import (
     CompareRequest,
     CompareResponse,
     ExplainRequest,
+    ExplainResponse,
     GenerateRequest,
 )
 
@@ -31,15 +32,18 @@ from engine.graph import (
 )
 from engine.montecarlo import breach_probability
 
+# JK's existing MITRE explanation integration
+from ai.integration import explain_edge_ids
+
 
 # =====================================================
-# APPLICATION
+# FASTAPI APPLICATION
 # =====================================================
 
 app = FastAPI(
     title="ShadowTwin API",
-    version="1.0.0",
-    description="Cyber Attack Graph and Defence Simulation",
+    version="1.1.0",
+    description="Cyber Attack Graph, Simulation and Defence Engine",
 )
 
 app.add_middleware(
@@ -50,14 +54,14 @@ app.add_middleware(
 )
 
 TWIN_FILE = (
-    Path(__file__).parent
+    Path(__file__).resolve().parent
     / "data"
     / "acme_twin.json"
 )
 
 
 # =====================================================
-# LOAD AND VALIDATE DIGITAL TWIN
+# DIGITAL TWIN HELPERS
 # =====================================================
 
 def load_twin():
@@ -71,7 +75,6 @@ def load_twin():
         data = json.loads(
             TWIN_FILE.read_text(encoding="utf-8")
         )
-
         Twin.model_validate(data)
         return data
 
@@ -214,7 +217,6 @@ def graph_paths(G, entries, jewels, persona):
 
 
 def graph_cut_edges(G, entries, jewels):
-    # Auxiliary connectors must not become chokepoints.
     source = "__shadowtwin_source__"
     sink = "__shadowtwin_sink__"
 
@@ -259,7 +261,7 @@ def graph_cut_edges(G, entries, jewels):
 
 
 # =====================================================
-# MONTE CARLO HELPERS
+# SIMULATION HELPERS
 # =====================================================
 
 def simulate_probability(
@@ -372,19 +374,19 @@ def get_twin():
 
 
 # =====================================================
-# AI GENERATION - JK
+# AI DIGITAL TWIN GENERATION
 # =====================================================
 
 @app.post("/twin/generate")
 def generate(req: GenerateRequest):
     raise HTTPException(
         status_code=501,
-        detail="JK AI twin generation pending",
+        detail="AI twin generation not yet integrated",
     )
 
 
 # =====================================================
-# SIMULATE
+# ATTACK SIMULATION
 # =====================================================
 
 @app.post(
@@ -498,8 +500,6 @@ def defend(req: DefendRequest):
         for c in twin["controls"]
     }
 
-    # Remaining cost budget can only purchase
-    # controls that are not already enabled.
     candidates = [
         c for c in twin["controls"]
         if c["id"] not in baseline
@@ -521,7 +521,6 @@ def defend(req: DefendRequest):
 
     before = risk(baseline)
 
-    # Rank every available individual control.
     ranking = []
 
     for c in candidates:
@@ -545,8 +544,6 @@ def defend(req: DefendRequest):
         )
     )
 
-    # Exhaustively examine affordable control sets.
-    # Suitable for the small hackathon demo.
     best_controls = set()
     best_risk = before
     best_cost = 0
@@ -588,15 +585,12 @@ def defend(req: DefendRequest):
                 best_controls = selected
                 best_cost = total_cost
 
-    # Report incremental effect of chosen controls.
     steps = []
     active = set(baseline)
     remaining = set(best_controls)
     current_risk = before
 
     while remaining:
-        # Choose the next selected control with
-        # the largest current marginal reduction.
         next_id = min(
             remaining,
             key=lambda cid: (
@@ -755,12 +749,24 @@ def compare(req: CompareRequest):
 
 
 # =====================================================
-# ATTACK EXPLANATION - JK
+# JK OFFLINE MITRE EXPLANATION
 # =====================================================
 
-@app.post("/explain")
+@app.post(
+    "/explain",
+    response_model=ExplainResponse,
+)
 def explain(req: ExplainRequest):
-    raise HTTPException(
-        status_code=501,
-        detail="JK explanation integration pending",
-    )
+    twin = load_twin()
+
+    try:
+        return explain_edge_ids(
+            req.path,
+            twin
+        )
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=str(exc)
+        )

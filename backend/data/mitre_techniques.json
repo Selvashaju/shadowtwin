@@ -1,0 +1,51 @@
+
+{
+  "T1566": {
+    "name": "Phishing",
+    "tactic": "Initial Access",
+    "description": "An attacker uses deceptive messages to gain access to a victim system.",
+    "defense": "Email filtering and phishing-resistant MFA"
+  },
+  "T1190": {
+    "name": "Exploit Public-Facing Application",
+    "tactic": "Initial Access",
+    "description": "An attacker exploits a weakness in an internet-facing application.",
+    "defense": "Patch vulnerabilities and restrict exposed services"
+  },
+  "T1078": {
+    "name": "Valid Accounts",
+    "tactic": "Initial Access, Persistence, Privilege Escalation",
+    "description": "An attacker abuses legitimate account credentials to access protected systems.",
+    "defense": "MFA and least-privilege access"
+  },
+  "T1003": {
+    "name": "OS Credential Dumping",
+    "tactic": "Credential Access",
+    "description": "An attacker attempts to obtain credentials from an operating system.",
+    "defense": "Credential protection and endpoint monitoring"
+  },
+  "T1539": {
+    "name": "Steal Web Session Cookie",
+    "tactic": "Credential Access",
+    "description": "An attacker steals session cookies that may allow unauthorized access to web applications.",
+    "defense": "Session protection and endpoint monitoring"
+  },
+  "T1068": {
+    "name": "Exploitation for Privilege Escalation",
+    "tactic": "Privilege Escalation",
+    "description": "An attacker exploits a software weakness to gain higher permissions.",
+    "defense": "Security patching and least privilege"
+  },
+  "T1021": {
+    "name": "Remote Services",
+    "tactic": "Lateral Movement",
+    "description": "An attacker uses remote access services to move between systems.",
+    "defense": "Network segmentation and restricted remote access"
+  },
+  "AML.T0051": {
+    "name": "LLM Prompt Injection",
+    "tactic": "AI Attack",
+    "description": "An attacker manipulates AI model instructions through malicious input.",
+    "defense": "AI guardrails and strict data-access permissions"
+  }
+}
