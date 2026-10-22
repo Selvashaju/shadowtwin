@@ -4,37 +4,27 @@ import type { ElementDefinition } from "cytoscape";
 import { Activity, AlertTriangle, Lock, Network, RefreshCw, Shield, ShieldCheck } from "lucide-react";
 import { getTwin, simulate, type Persona, type SimulateResponse, type Twin, type TwinNode, type TwinEdge, type TwinControl } from "./api";
 
-// The Defence Planner uses the same backend URL as the other frontend API calls.
+// Live Defence Planner uses the same API server as the simulation.
 const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
-
 type DefencePlan = {
-  persona: Persona;
-  budget: number;
-  before: number;
-  after: number;
-  controls: string[];
-  steps: Array<{
-    control: string;
-    label: string;
-    cost: number;
-    breach_before: number;
-    breach_after: number;
-    drop: number;
-  }>;
-  blast_before: number;
-  blast_after: number;
-  headline: string;
+  persona: Persona; budget: number; before: number; after: number;
+  controls: string[]; headline: string; blast_before: number; blast_after: number;
+  steps: { control: string; label: string; cost: number; breach_before: number; breach_after: number; drop: number }[];
 };
-
 async function requestDefencePlan(persona: Persona, entry: string, controls: string[], budget: number): Promise<DefencePlan> {
-  const response = await fetch(`${API_BASE}/defend`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ persona, entry: [entry], controls, budget }),
-  });
-  if (!response.ok) throw new Error(`Defence request failed (HTTP ${response.status})`);
-  return (await response.json()) as DefencePlan;
+  const response = await fetch(`${API_BASE}/defend`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ persona, entry: [entry], controls, budget }) });
+  if (!response.ok) throw new Error(`Defence request failed: HTTP ${response.status}`);
+  return response.json();
 }
+
+// Stable coordinates give the five live assets readable, separated positions.
+const acmePositions: Record<string, { x: number; y: number }> = {
+  internet: { x: 90, y: 250 },
+  employee: { x: 320, y: 120 },
+  webapp: { x: 320, y: 385 },
+  server: { x: 560, y: 250 },
+  database: { x: 800, y: 250 },
+};
 
 const demoNodes: TwinNode[] = [
   { id: "employee", label: "HR Employee", type: "user", zone: "corp", criticality: 2, props: { entry: true } },
@@ -131,9 +121,14 @@ export default function App() {
   const blocked = useMemo(() => new Set(live && result ? result.blocked_edges : twin.edges.filter(e => e.controls.some(c => controls.includes(c))).map(e => e.id)), [live, result, twin, controls]);
   const hasStubLikeResult = live && result !== null && result.paths.length === 0 && result.breach_pct === 0 && Object.keys(result.per_jewel).length === 0 && result.blast_radius.source.length === 0;
   const elements = useMemo<ElementDefinition[]>(() => [
-    ...twin.nodes.map(n => ({ data: { id: n.id, label: n.label, zone: n.zone, jewel: n.props?.crown_jewel === true } })),
+    ...twin.nodes.map((n, index) => ({
+      data: { id: n.id, label: n.label, zone: n.zone, jewel: n.props?.crown_jewel === true },
+      position: live && acmePositions[n.id]
+        ? acmePositions[n.id]
+        : { x: 110 + (index % 4) * 235, y: 110 + Math.floor(index / 4) * 240 },
+    })),
     ...twin.edges.map(e => ({ data: { id: e.id, source: e.source, target: e.target, technique: e.technique }, classes: blocked.has(e.id) ? "blocked" : highlighted.includes(e.id) ? "attack" : "" })),
-  ], [twin, blocked, highlighted]);
+  ], [twin, blocked, highlighted, live]);
 
   const toggleControl = (id: string) => {
     setDefencePlan(null);
@@ -148,22 +143,15 @@ export default function App() {
   };
   const handlePlanDefence = async () => {
     if (!live || !selectedEntry) return;
-    setPlanning(true);
-    setPlanError("");
-    setDefencePlan(null);
-    try {
-      const plan = await requestDefencePlan(persona, selectedEntry, controls, budget);
-      setDefencePlan(plan);
-    } catch (error) {
-      setPlanError(error instanceof Error ? error.message : "Defence planning failed");
-    } finally {
-      setPlanning(false);
-    }
+    setPlanning(true); setPlanError(""); setDefencePlan(null);
+    try { setDefencePlan(await requestDefencePlan(persona, selectedEntry, controls, budget)); }
+    catch (err) { setPlanError(err instanceof Error ? err.message : "Defence planning failed"); }
+    finally { setPlanning(false); }
   };
   const applyDefencePlan = () => {
     if (!defencePlan) return;
-    const available = new Set(twin.controls.map(control => control.id));
-    setControls(current => Array.from(new Set([...current, ...defencePlan.controls.filter(id => available.has(id))])));
+    const valid = new Set(twin.controls.map(c => c.id));
+    setControls(current => [...new Set([...current, ...defencePlan.controls.filter(id => valid.has(id))])]);
     setDefencePlan(null);
   };
 
@@ -187,13 +175,13 @@ export default function App() {
               {[1, 2, 3, 4, 5, 6].map(value => <option key={value} value={value}>{value} units</option>)}
             </select>
           </div>
-          <button onClick={handlePlanDefence} disabled={!live || planning} className="mt-3 w-full rounded-lg bg-cyan-600 p-3 font-semibold hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-50"><ShieldCheck size={16} className="mr-2 inline"/>{planning ? "Planning..." : "Plan Defence"}</button>
+          <button onClick={handlePlanDefence} disabled={!live || planning} className="mt-3 w-full rounded-lg bg-cyan-600 p-3 font-semibold hover:bg-cyan-500 disabled:opacity-50"><ShieldCheck size={16} className="mr-2 inline"/>{planning ? "Planning..." : "Plan Defence"}</button>
           {planError && <p role="alert" className="mt-2 break-words text-xs text-red-400">{planError}</p>}
           <button onClick={reset} className="mt-3 w-full rounded-lg border border-slate-600 p-3 hover:bg-slate-800"><RefreshCw size={16} className="mr-2 inline"/>Reset Simulation</button>
         </aside>
         <main className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900 lg:col-span-2">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 p-5"><h2 className="flex items-center gap-2 font-bold"><Network className="text-cyan-400" size={20}/>Digital Twin Network</h2><span className="text-xs text-slate-400">{twin.nodes.length} Assets · {twin.edges.length} Relationships</span></div>
-          <CytoscapeComponent elements={elements} stylesheet={styles as any} layout={{ name: "breadthfirst", directed: true, padding: 65, spacingFactor: 1.7, animate: false }} style={{ width: "100%", height: "540px" }}/>
+          <CytoscapeComponent elements={elements} stylesheet={styles as any} layout={{ name: "preset", fit: true, padding: 80, animate: false }} style={{ width: "100%", height: "540px" }}/>
           <div className="flex flex-wrap gap-4 border-t border-slate-800 p-4 text-xs text-slate-400"><span>🔵 Corporate</span><span>🟠 DMZ / Internet</span><span>🟣 Core</span><span>🟢 Cloud</span><span>🔴 Attack Path</span><span>⚪ Blocked Edge</span></div>
         </main>
         <aside className="space-y-4">
@@ -208,7 +196,7 @@ export default function App() {
               </div>
               <p className="mt-3 text-sm text-slate-300">Blast radius: {defencePlan.blast_before} → {defencePlan.blast_after} assets</p>
               <div className="mt-3 space-y-2">{defencePlan.steps.map(step => <div key={step.control} className="rounded-lg bg-slate-800 p-3 text-sm"><span className="font-semibold">{step.label}</span><p className="mt-1 text-xs text-slate-400">Cost {step.cost} · Risk reduction {step.drop.toFixed(1)} points</p></div>)}</div>
-              {defencePlan.controls.length > 0 ? <button onClick={applyDefencePlan} className="mt-4 w-full rounded-lg bg-emerald-600 p-3 font-semibold hover:bg-emerald-500">Apply Recommended Controls</button> : <p className="mt-3 text-xs text-slate-400">No additional controls were recommended for this budget.</p>}
+              {defencePlan.controls.length > 0 ? <button onClick={applyDefencePlan} className="mt-4 w-full rounded-lg bg-emerald-600 p-3 font-semibold hover:bg-emerald-500">Apply Recommended Controls</button> : <p className="mt-3 text-xs text-slate-400">No additional controls recommended for this budget.</p>}
             </div>
           )}
           <div className="rounded-xl border border-slate-800 bg-slate-900 p-5"><h2 className="mb-3 flex items-center gap-2 font-bold"><ShieldCheck className="text-emerald-400" size={19}/>Defence Overview</h2><p className="mb-3 text-sm text-slate-400">Selected Security Controls</p>{controls.length === 0 ? <p className="text-sm text-amber-400">No protections enabled</p> : <div className="space-y-2">{controls.map(id => <div className="rounded-lg bg-slate-800 p-3 text-sm" key={id}>{twin.controls.find(c => c.id === id)?.label ?? id}</div>)}</div>}<p className="mt-4 text-xs text-slate-500">{live ? "Calculated simulation updates after a control changes." : "Demo controls only; real risk requires backend organization data."}</p></div>
