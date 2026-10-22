@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
-from fastapi import FastAPI
+
+from fastapi import FastAPI, HTTPException
+
 from fastapi.middleware.cors import CORSMiddleware
 from models import (SimulateRequest, BlastRequest, DefendRequest,
                     CompareRequest, ExplainRequest, GenerateRequest)
@@ -10,6 +12,10 @@ from models import (SimulateRequest, BlastRequest, DefendRequest,
 from engine.graph import active_graph, top_paths, blast_radius
 from engine.montecarlo import breach_probability
 from engine.defend import plan
+
+from ai.integration import explain_edge_ids
+from models import ExplainResponse
+
 
 app = FastAPI(title="ShadowTwin API")
 app.add_middleware(CORSMiddleware, allow_origins=["*"],
@@ -60,6 +66,14 @@ def compare(req: CompareRequest):
     return {"persona": req.persona, "before": side, "after": side,
             "delta_breach": 0.0, "delta_blast": 0}
 
-@app.post("/explain")
+
+@app.post("/explain", response_model=ExplainResponse)
 def explain(req: ExplainRequest):
-    return {"steps": [], "summary": "stub", "source": "template"}
+    try:
+        twin = load_twin()
+        return explain_edge_ids(req.path, twin)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=str(exc)
+        ) from exc
