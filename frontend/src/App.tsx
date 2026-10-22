@@ -93,6 +93,7 @@ export default function App() {
   const demoPathIds = selectedEntry === "internet" ? ["e5", "e3", "e4"] : ["e1", "e2", "e3", "e4"];
   const highlighted = live ? (result?.paths[0]?.edges ?? []) : demoPathIds;
   const blocked = useMemo(() => new Set(live && result ? result.blocked_edges : twin.edges.filter(e => e.controls.some(c => controls.includes(c))).map(e => e.id)), [live, result, twin, controls]);
+  const hasStubLikeResult = live && result !== null && result.paths.length === 0 && result.breach_pct === 0 && Object.keys(result.per_jewel).length === 0 && result.blast_radius.source.length === 0;
   const elements = useMemo<ElementDefinition[]>(() => [
     ...twin.nodes.map(n => ({ data: { id: n.id, label: n.label, zone: n.zone, jewel: n.props?.crown_jewel === true } })),
     ...twin.edges.map(e => ({ data: { id: e.id, source: e.source, target: e.target, technique: e.technique }, classes: blocked.has(e.id) ? "blocked" : highlighted.includes(e.id) ? "attack" : "" })),
@@ -100,7 +101,7 @@ export default function App() {
 
   const toggleControl = (id: string) => setControls(current => current.includes(id) ? current.filter(x => x !== id) : [...current, id]);
   const reset = () => { setControls(twin.controls.filter(c => c.enabled).map(c => c.id)); setPersona("apt"); setEntry(entries[0]?.id ?? "employee"); };
-  const applyDemo = () => setControls(current => Array.from(new Set([...current, ...["mfa", "segmentation"].filter(id => twin.controls.some(c => c.id === id))])));
+  const applyDemo = () => setControls(current => Array.from(new Set([...current, ...(live ? ["C2", "C4"] : ["mfa", "segmentation"]).filter(id => twin.controls.some(c => c.id === id))])));
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
@@ -121,11 +122,11 @@ export default function App() {
         </aside>
         <main className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900 lg:col-span-2">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 p-5"><h2 className="flex items-center gap-2 font-bold"><Network className="text-cyan-400" size={20}/>Digital Twin Network</h2><span className="text-xs text-slate-400">{twin.nodes.length} Assets · {twin.edges.length} Relationships</span></div>
-          <CytoscapeComponent elements={elements} stylesheet={styles as any} layout={{ name: "cose", animate: false, randomize: false }} style={{ width: "100%", height: "540px" }}/>
+          <CytoscapeComponent elements={elements} stylesheet={styles as any} layout={{ name: "breadthfirst", directed: true, padding: 65, spacingFactor: 1.7, animate: false }} style={{ width: "100%", height: "540px" }}/>
           <div className="flex flex-wrap gap-4 border-t border-slate-800 p-4 text-xs text-slate-400"><span>🔵 Corporate</span><span>🟠 DMZ / Internet</span><span>🟣 Core</span><span>🟢 Cloud</span><span>🔴 Attack Path</span><span>⚪ Blocked Edge</span></div>
         </main>
         <aside className="space-y-4">
-          <div className="rounded-xl border border-slate-800 bg-slate-900 p-5"><h2 className="mb-5 flex items-center gap-2 font-bold"><AlertTriangle className="text-red-400" size={19}/>Risk Overview</h2><p className="text-xs text-slate-400">Breach Probability</p><p className="mt-2 text-3xl font-extrabold text-amber-400">{live && result ? `${result.breach_pct.toFixed(1)}%` : "Awaiting API"}</p><p className="mt-2 break-words text-xs text-slate-500">{simStatus}</p><hr className="my-5 border-slate-700"/><p className="text-sm text-slate-400">Blocked Relationships</p><p className="mt-2 text-3xl font-bold">{blocked.size} / {twin.edges.length}</p><hr className="my-5 border-slate-700"/><p className="text-sm text-slate-400">Blast Radius</p><p className="mt-2 text-3xl font-bold text-red-400">{live && result ? `${result.blast_radius.count} assets` : "Awaiting API"}</p></div>
+          <div className="rounded-xl border border-slate-800 bg-slate-900 p-5"><h2 className="mb-5 flex items-center gap-2 font-bold"><AlertTriangle className="text-red-400" size={19}/>Risk Overview</h2><p className="text-xs text-slate-400">Breach Probability</p><p className="mt-2 text-3xl font-extrabold text-amber-400">{live && result && !hasStubLikeResult ? `${result.breach_pct.toFixed(1)}%` : "Awaiting engine"}</p><p className="mt-2 break-words text-xs text-slate-500">{hasStubLikeResult ? "Backend returned an empty/stub-like result — no verified risk score yet." : simStatus}</p><hr className="my-5 border-slate-700"/><p className="text-sm text-slate-400">Blocked Relationships</p><p className="mt-2 text-3xl font-bold">{blocked.size} / {twin.edges.length}</p><hr className="my-5 border-slate-700"/><p className="text-sm text-slate-400">Blast Radius</p><p className="mt-2 text-3xl font-bold text-red-400">{live && result && !hasStubLikeResult ? `${result.blast_radius.count} assets` : "Awaiting engine"}</p></div>
           <div className="rounded-xl border border-slate-800 bg-slate-900 p-5"><h2 className="mb-3 flex items-center gap-2 font-bold"><ShieldCheck className="text-emerald-400" size={19}/>Defence Overview</h2><p className="mb-3 text-sm text-slate-400">Selected Security Controls</p>{controls.length === 0 ? <p className="text-sm text-amber-400">No protections enabled</p> : <div className="space-y-2">{controls.map(id => <div className="rounded-lg bg-slate-800 p-3 text-sm" key={id}>{twin.controls.find(c => c.id === id)?.label ?? id}</div>)}</div>}<p className="mt-4 text-xs text-slate-500">{live ? "Calculated simulation updates after a control changes." : "Demo controls only; real risk requires backend organization data."}</p></div>
         </aside>
       </div>
