@@ -5,6 +5,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from models import (SimulateRequest, BlastRequest, DefendRequest,
                     CompareRequest, ExplainRequest, GenerateRequest)
 
+# Engine imports (step 6a). load_twin is NOT imported here because
+# main.py already has its own load_twin below.
+from engine.graph import active_graph, top_paths, blast_radius
+from engine.montecarlo import breach_probability
+from engine.defend import plan
+
 app = FastAPI(title="ShadowTwin API")
 app.add_middleware(CORSMiddleware, allow_origins=["*"],
                    allow_methods=["*"], allow_headers=["*"])
